@@ -1,55 +1,56 @@
 import express from 'express';
-import {quotes, getAllQuotes } from './quotes.js';
+import db from './database.js';
 
 // basic setup
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// helper function
-/*
-  selects a random item from an array.
-  @param {Array<any>} arr The array to pick from.
-  @returns {any} A random element form the array.  
-*/
+// Root endpoint for a welcome message
+app.get('/', (req,res) => {
+  res.status(200).json({message:"koanAPI - Now using SQlite :)"});
+});
 
-const getRandomItem = (arr) => {
-    if (!arr || arr.length == 0){
-        return null;
+const getRandomQuote = (category, res) => {
+  let sql;
+  const params = [];
+  if (category) {
+    // Get a random quote from a sepcific category
+    sql = `SELECT quote FROM quotes WHERE category = ? ORDER BY RANDOM() LIMIT 1`;
+    params.push(category);
+  } else {
+    // get a completely random quote from all categories
+    sql = `SELECT quote FROM quotes ORDER BY RANDOM() LIMIT 1`;
+  }
+
+  db.get(sql, params, (err, row) => {
+    if (err) {
+      res.status(500).json({error:err.message});
+      return;
     }
-    const randomIndex = Math.floor(Math.random() * arr.length);
-    return arr[randomIndex];
+    res.status(200).json(row||{quote:"No quote found."});
+  });
 };
 
 // API endpoints
 
-// Root endpoint for a welcome message
-app.get('/', (req,res) => {
-  res.status(200).json({message:"koanAPI"});
-});
-
-// Endpoint to get a random "x" quote
+// Endpoint to get a random "classic" quote
 app.get('/classic', (req,res) => {
-  const quote = getRandomItem(quotes.classic);
-  res.status(200).json({quote});
+  getRandomQuote('classic', res);
 });
 
-// Endpoint to get a random "y" quote
+// Endpoint to get a random "paradox" quote
 app.get('/paradox', (req,res) =>{
-  const quote = getRandomItem(quotes.paradox);
-  res.status(200).json({quote});
+  getRandomQuote('paradox', res);
 });
 
-// Endpoint to get a random "z" quote
+// Endpoint to get a random "simple" quote
 app.get('/simple', (req,res) =>{
-  const quote = getRandomItem(quotes.simple);
-  res.status(200).json({quote});
+  getRandomQuote('simple', res);
 });
 
 // Endpoint to get a completely random quote from all categories
-app.get('/random', (req,res) =>{
-  const allQuotes = getAllQuotes();
-  const quote = getRandomItem(allQuotes);
-  res.status(200).json({quote});
+app.get('/random', (req,res) => {
+  getRandomQuote(null, res);
 });
 
 app.listen(PORT, () =>{
